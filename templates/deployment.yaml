@@ -2,8 +2,24 @@
 
 apiVersion: apps/v1
 kind: Deployment
+
 metadata:
   name: {{ .name }}
+
+  labels:
+    app: {{ .name }}
+{{- with $.Values.global.labels }}
+{{ toYaml . | nindent 4 }}
+{{- end }}
+
+  annotations:
+{{- with $.Values.global.annotations }}
+{{ toYaml . | nindent 4 }}
+{{- end }}
+
+{{- with .annotations }}
+{{ toYaml . | nindent 4 }}
+{{- end }}
 
 spec:
   replicas: {{ .replicas }}
@@ -14,23 +30,49 @@ spec:
 
   template:
     metadata:
+
       labels:
         app: {{ .name }}
+{{- with $.Values.global.labels }}
+{{ toYaml . | nindent 8 }}
+{{- end }}
+
+      annotations:
+{{- with $.Values.global.annotations }}
+{{ toYaml . | nindent 8 }}
+{{- end }}
+
+{{- with .annotations }}
+{{ toYaml . | nindent 8 }}
+{{- end }}
 
     spec:
+
+      imagePullSecrets:
+{{ toYaml $.Values.global.imagePullSecrets | nindent 8 }}
+
+      nodeSelector:
+{{ toYaml $.Values.global.nodeSelector | nindent 8 }}
+
       containers:
       - name: {{ .name }}
 
         image: {{ .image }}
 
-        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: {{ .port }}
+
+        resources:
+
+{{- if .resources }}
+{{ toYaml .resources | nindent 10 }}
+{{- else }}
+{{ toYaml $.Values.global.resources | nindent 10 }}
+{{- end }}
 
         envFrom:
         - configMapRef:
             name: {{ .name }}-config
-
-        ports:
-        - containerPort: {{ .port }}
 
 ---
 {{- end }}
