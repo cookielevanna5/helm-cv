@@ -1,78 +1,61 @@
 {{- range .Values.components }}
 
+{{- $component := . }}
+
+{{- range .instances }}
+
 apiVersion: apps/v1
 kind: Deployment
 
 metadata:
-  name: {{ .name }}
+  name: {{ $component.componentName }}-{{ .name }}
 
   labels:
-    app: {{ .name }}
+    app: {{ $component.componentName }}-{{ .name }}
+
 {{- with $.Values.global.labels }}
 {{ toYaml . | nindent 4 }}
 {{- end }}
 
-  annotations:
-{{- with $.Values.global.annotations }}
-{{ toYaml . | nindent 4 }}
-{{- end }}
-
-{{- with .annotations }}
-{{ toYaml . | nindent 4 }}
-{{- end }}
-
 spec:
-  replicas: {{ .replicas }}
+
+  replicas: {{ $component.replicas }}
 
   selector:
     matchLabels:
-      app: {{ .name }}
+      app: {{ $component.componentName }}-{{ .name }}
 
   template:
     metadata:
 
       labels:
-        app: {{ .name }}
-{{- with $.Values.global.labels }}
-{{ toYaml . | nindent 8 }}
-{{- end }}
+        app: {{ $component.componentName }}-{{ .name }}
 
       annotations:
-{{- with $.Values.global.annotations }}
-{{ toYaml . | nindent 8 }}
-{{- end }}
-
-{{- with .annotations }}
-{{ toYaml . | nindent 8 }}
-{{- end }}
+{{ toYaml $.Values.global.annotations | nindent 8 }}
 
     spec:
 
       imagePullSecrets:
 {{ toYaml $.Values.global.imagePullSecrets | nindent 8 }}
 
-      nodeSelector:
-{{ toYaml $.Values.global.nodeSelector | nindent 8 }}
-
       containers:
-      - name: {{ .name }}
 
-        image: {{ .image }}
+      - name: {{ $component.componentName }}
 
-        ports:
-        - containerPort: {{ .port }}
+        image: {{ $component.image }}
 
         resources:
-
-{{- if .resources }}
-{{ toYaml .resources | nindent 10 }}
+{{- if $component.resources }}
+{{ toYaml $component.resources | nindent 10 }}
 {{- else }}
 {{ toYaml $.Values.global.resources | nindent 10 }}
 {{- end }}
 
         envFrom:
         - configMapRef:
-            name: {{ .name }}-config
+            name: {{ $component.componentName }}-{{ .name }}-config
 
 ---
+{{- end }}
 {{- end }}

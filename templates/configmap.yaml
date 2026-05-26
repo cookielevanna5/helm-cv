@@ -1,14 +1,25 @@
 {{- range .Values.components }}
 
+{{- $component := . }}
+
+{{- range .instances }}
+
 apiVersion: v1
 kind: ConfigMap
+
 metadata:
-  name: {{ .name }}-config
+  name: {{ $component.componentName }}-{{ .name }}-config
 
 data:
-{{- range $key, $value := .config }}
-  {{ $key }}: {{ $value | quote }}
+
+{{- range $k,$v := $component.commonConfig }}
+  {{ $k }}: {{ $v | quote }}
+{{- end }}
+
+{{- range $k,$v := .config }}
+  {{ $k }}: {{ $v | quote }}
 {{- end }}
 
 ---
+{{- end }}
 {{- end }}

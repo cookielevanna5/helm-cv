@@ -1,80 +1,99 @@
 global:
-  labels:
-    team: backend
-    managed-by: helm
-
   annotations:
     prometheus.io/scrape: "true"
 
   imagePullSecrets:
     - name: prod-regcred
 
-  nodeSelector:
-    workload: production
+  labels:
+    team: backend
 
   resources:
     requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
       cpu: 500m
       memory: 512Mi
 
-    limits:
-      cpu: 2
-      memory: 2Gi
-
 components:
-  - name: gateway
-    replicas: 3
+  # ---------- Gateway ----------
+
+  - componentName: gateway
+
     image: nginx:1.29
-    port: 80
+    replicas: 3
 
-    config:
-      API_BASE_URL: http://orders-eu:8080
+    commonConfig:
+      LOG_LEVEL: warn
 
-  - name: orders-eu
-    replicas: 5
+    instances:
+      - name: default
+        config:
+          API_BASE_URL: http://orders-eu:8080
+
+  # ---------- Orders ----------
+
+  - componentName: orders
+
     image: ghcr.io/acme/orders-service:1.3.0
-    port: 8080
-
-    config:
-      DB_HOST: postgres-eu
-      REGION: eu
-
-    annotations:
-      region: eu
-
-  - name: orders-us
     replicas: 5
-    image: ghcr.io/acme/orders-service:1.3.0
-    port: 8080
-
-    config:
-      DB_HOST: postgres-us
-      REGION: us
-
-    annotations:
-      region: us
 
     resources:
       requests:
-        cpu: 1
-        memory: 1Gi
-
+        cpu: 500m
+        memory: 512Mi
       limits:
-        cpu: 4
-        memory: 4Gi
+        cpu: 2
+        memory: 2Gi
 
-  - name: payments
-    replicas: 4
+    commonConfig:
+      DB_PORT: "5432"
+      LOG_LEVEL: warn
+
+    instances:
+      - name: eu
+        config:
+          DB_HOST: postgres-eu
+          REGION: eu
+
+      - name: us
+        config:
+          DB_HOST: postgres-us
+          REGION: us
+
+      - name: asia
+        config:
+          DB_HOST: postgres-asia
+          REGION: asia
+
+  # ---------- Payments ----------
+
+  - componentName: payments
+
     image: ghcr.io/acme/payments-service:2.1.0
-    port: 8080
+    replicas: 4
 
-    config:
+    commonConfig:
       PAYMENT_PROVIDER: stripe
+      LOG_LEVEL: warn
 
-  - name: notifications
-    replicas: 3
+    instances:
+      - name: default
+        config:
+          API_URL: payment-api
+
+  # ---------- Notifications ----------
+
+  - componentName: notifications
+
     image: ghcr.io/acme/notifications-service:1.5.0
-    port: 8080
+    replicas: 3
 
-    config:
-      SMTP_HOST: smtp.company.com
+    commonConfig:
+      SMTP_PORT: "587"
+
+    instances:
+      - name: default
+        config:
+          SMTP_HOST: smtp.company.com
